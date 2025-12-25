@@ -1,0 +1,32 @@
+{
+  "name": "nebula-transf",
+  "version": "1.1.0",
+  "description": "Calculadora Profesional de Transformadores - Diseño por Demanda",
+  "main": "main.js",
+  "type": "commonjs",
+  "author": "Miguel Angel Buelvas Ortega",
+  "license": "MIT",
+
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+
+  "devDependencies": {
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12"
+  },
+
+  "build": {
+    "appId": "com.nebulacode.nebulatransf",
+    "productName": "NebulaTransf Pro",
+    "executableName": "NebulaTransfPro",
+    "copyright": "© 2025 Miguel Angel Buelvas Ortega",
+
+    "win": {
+      "target": "msi",
+      "icon": "build/icon.ico"
+    }
+  }
+}
+

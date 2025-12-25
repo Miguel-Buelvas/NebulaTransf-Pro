@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NebulaTransf Pro | Diseño por Demanda</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Panel Principal -->
+        <div class="main-panel">
+            <header>
+                <h1>Nebula<span>Transf</span> Pro</h1>
+                <span class="badge">Diseño por Demanda • Recomendación Inteligente</span>
+            </header>
+
+            <div class="content">
+                <div class="section">
+                    <h2>⚡ Entrada</h2>
+                    <div class="form-group">
+                        <label for="vEntrada">Voltaje de Entrada (V)</label>
+                        <input type="number" id="vEntrada" value="110" step="0.1" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="iEntrada">Corriente de Entrada (A)</label>
+                        <input type="text" id="iEntrada" readonly placeholder="Se calcula">
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>🎯 Salidas</h2>
+                    <div class="form-group">
+                        <label>Salida 1</label>
+                        <div style="display: flex; gap: 12px;">
+                            <input type="number" id="v1" placeholder="Voltaje (V)" value="50" step="0.1">
+                            <input type="number" id="i1" placeholder="Corriente (A)" value="10" step="0.1">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Salida 2</label>
+                        <div style="display: flex; gap: 12px;">
+                            <input type="number" id="v2" placeholder="Voltaje (V)" value="12" step="0.1">
+                            <input type="number" id="i2" placeholder="Corriente (A)" value="2" step="0.1">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>📊 Resultados Recomendados</h2>
+                    <div class="results">
+                        <div class="result-card">
+                            <h3>Potencia Total</h3>
+                            <div class="result-value" id="totalWatts">—</div>
+                            <div>Watts</div>
+                        </div>
+                        <div class="result-card">
+                            <h3>Núcleo Óptimo</h3>
+                            <div class="result-value" id="nucleoOptimo">—</div>
+                            <div id="nucleoCapacidad">—</div>
+                        </div>
+                        <div class="result-card">
+                            <h3>Vueltas Primario</h3>
+                            <div class="result-value" id="vueltasPrimario">—</div>
+                            <div>Vueltas</div>
+                        </div>
+                        <div class="result-card">
+                            <h3>Calibre Entrada</h3>
+                            <div class="result-value" id="calibreEntrada">—</div>
+                            <div>AWG</div>
+                        </div>
+                    </div>
+
+                    <div id="salidasResults" class="output-grid">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+
+                    <div id="alertBox" class="alert" style="display: none;"></div>
+                </div>
+
+                <div class="section">
+                    <button onclick="calculate()" class="btn-success">✅ Calcular Diseño Óptimo</button>
+                    <button onclick="resetForm()" class="btn-danger">🔄 Reiniciar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Lateral: Tablas -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                📚 Tablas de Referencia
+            </div>
+            <div class="tables-container">
+                <!-- Tabla de Núcleos -->
+                <div class="table-wrapper">
+                    <div class="table-title">Núcleos Magnéticos</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tamaño</th>
+                                <th>W_max</th>
+                                <th>V/V</th>
+                                <th>Área (cm²)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="nucleosTableBody">
+                            <!-- Se llena con JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Tabla de Calibres AWG -->
+                <div class="table-wrapper">
+                    <div class="table-title">Calibres AWG</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>AWG</th>
+                                <th>Diám. (mm)</th>
+                                <th>Corriente (A)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="awgTableBody">
+                            <!-- Se llena con JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/data.js"></script>
+    <script>
+        // Rellenar tablas al cargar
+        function loadTables() {
+            const nucleosBody = document.getElementById('nucleosTableBody');
+            const awgBody = document.getElementById('awgTableBody');
+
+            // Núcleos
+            NUCLEOS.forEach(n => {
+                const row = document.createElement('tr');
+                row.className = 'nucleo-row';
+                row.innerHTML = `
+                    <td>${n.size}</td>
+                    <td>${n.w_max}</td>
+                    <td>${n.vv.toFixed(3)}</td>
+                    <td>${n.area_cm2}</td>
+                `;
+                nucleosBody.appendChild(row);
+            });
+
+            // AWG
+            CALIBRES_AWG.forEach(c => {
+                const row = document.createElement('tr');
+                row.className = 'awg-row';
+                row.innerHTML = `
+                    <td>${c.awg}</td>
+                    <td>${c.diam_mm}</td>
+                    <td>${c.amp.toFixed(2)}</td>
+                `;
+                awgBody.appendChild(row);
+            });
+        }
+
+        function calculate() {
+            const Ve = parseFloat(document.getElementById('vEntrada').value) || 0;
+            const V1 = parseFloat(document.getElementById('v1').value) || 0;
+            const I1 = parseFloat(document.getElementById('i1').value) || 0;
+            const V2 = parseFloat(document.getElementById('v2').value) || 0;
+            const I2 = parseFloat(document.getElementById('i2').value) || 0;
+
+            if (Ve <= 0 || V1 <= 0 || I1 <= 0) {
+                showAlert('⚠️ Voltaje y corriente de la Salida 1 son obligatorios.', 'warning');
+                return;
+            }
+
+            const P1 = V1 * I1;
+            const P2 = V2 * I2;
+            const P_total = P1 + P2;
+            const eficiencia = 0.9;
+            const Ie = P_total / (Ve * eficiencia);
+
+            let nucleoOptimo = null;
+            for (let i = 0; i < NUCLEOS.length; i++) {
+                if (NUCLEOS[i].w_max >= P_total) {
+                    nucleoOptimo = NUCLEOS[i];
+                    break;
+                }
+            }
+
+            if (!nucleoOptimo) {
+                showAlert(`❌ No hay núcleo para ${P_total.toFixed(1)} W. Máx. disponible: ${NUCLEOS[NUCLEOS.length-1].w_max} W.`, 'danger');
+                return;
+            }
+
+            const vv = nucleoOptimo.vv;
+            const Ne = Ve * vv;
+            const N1 = V1 * vv;
+            const N2 = V2 * vv;
+
+            const calibreE = findCalibreForAmp(Ie);
+            const calibre1 = findCalibreForAmp(I1);
+            const calibre2 = findCalibreForAmp(I2);
+
+            // Actualizar UI con animación
+            const updateField = (id, value, delay = 0) => {
+                setTimeout(() => {
+                    document.getElementById(id).textContent = value;
+                    document.getElementById(id).style.opacity = '0';
+                    setTimeout(() => {
+                        document.getElementById(id).style.transition = 'opacity 0.4s';
+                        document.getElementById(id).style.opacity = '1';
+                    }, 10);
+                }, delay);
+            };
+
+            updateField('totalWatts', P_total.toFixed(1), 100);
+            updateField('nucleoOptimo', nucleoOptimo.size, 200);
+            updateField('nucleoCapacidad', `Cap. ${nucleoOptimo.w_max} W`, 250);
+            updateField('vueltasPrimario', Ne.toFixed(1), 300);
+            updateField('calibreEntrada', calibreE.awg, 350);
+            document.getElementById('iEntrada').value = Ie.toFixed(2);
+
+            const salidasHTML = `
+                <div class="output-item">
+                    <span class="output-label">Salida 1 (${V1}V × ${I1}A)</span>
+                    <div>Vueltas: ${N1.toFixed(1)} | Calibre: AWG ${calibre1.awg}</div>
+                </div>
+                <div class="output-item">
+                    <span class="output-label">Salida 2 (${V2}V × ${I2}A)</span>
+                    <div>Vueltas: ${N2.toFixed(1)} | Calibre: AWG ${calibre2.awg}</div>
+                </div>
+            `;
+            document.getElementById('salidasResults').innerHTML = salidasHTML;
+
+            const margen = nucleoOptimo.w_max - P_total;
+            if (margen < 10) {
+                showAlert(`⚠️ Margen crítico (${margen.toFixed(1)} W). Siguiente: ${NUCLEOS[NUCLEOS.indexOf(nucleoOptimo)+1]?.size || '—'}.`, 'warning');
+            } else if (margen < nucleoOptimo.w_max * 0.1) {
+                showAlert(`ℹ️ Margen del ${(margen/nucleoOptimo.w_max*100).toFixed(0)}%. Vigile temperatura.`, 'warning');
+            } else {
+                showAlert(`✅ Diseño óptimo con ${margen.toFixed(1)} W de margen.`, 'success');
+            }
+        }
+
+        function showAlert(message, type) {
+            const el = document.getElementById('alertBox');
+            el.textContent = message;
+            el.className = `alert alert-${type}`;
+            el.style.display = 'block';
+        }
+
+        function resetForm() {
+            document.getElementById('vEntrada').value = '110';
+            document.getElementById('v1').value = '50';
+            document.getElementById('i1').value = '10';
+            document.getElementById('v2').value = '12';
+            document.getElementById('i2').value = '2';
+            
+            ['totalWatts','nucleoOptimo','nucleoCapacidad','vueltasPrimario','calibreEntrada'].forEach(id => 
+                document.getElementById(id).textContent = '—'
+            );
+            document.getElementById('iEntrada').value = '';
+            document.getElementById('salidasResults').innerHTML = '';
+            document.getElementById('alertBox').style.display = 'none';
+        }
+
+        // Iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTables();
+            resetForm();
+        });
+    </script>
+<!-- ✅ FIRMA PERSONAL — AÑADIDA AQUÍ, ANTES DE </body> -->
+    <div style="text-align: center; padding: 20px; background: #f8f5f0; border-top: 1px solid #e0d6cc; margin-top: 20px; font-family: 'Segoe UI', sans-serif;">
+        <div style="font-weight: 700; font-size: 1.3rem; color: #4a2c2a; letter-spacing: 0.5px;">
+            MIGUEL ANGEL BUELVAS ORTEGA
+        </div>
+        <div style="font-size: 1.05rem; color: #b8860b; margin-top: 6px;">
+            buelvasmiguel03@gmail.com
+        </div>
+    </div>
+
+</body>
+</html>
